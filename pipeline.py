@@ -15,7 +15,8 @@ flags_dict = {
         "do_feature_scaling" : True,
         "show_confusionmatrix" : True,
         "show_graph" : True,
-        "do_all_classification_models" : True
+        "do_all_classification_models" : True ,
+        "encode_category" : True
         }
 
 #### Model Hyperparameters
@@ -123,6 +124,9 @@ filepath = filepath + filename
 dataset = pd.read_csv( filepath )
 X = dataset.iloc[:, [2,3] ].values
 Y = dataset.iloc[:,4].values
+if( flags_dict["encode_category"] ):
+    from sklearn.preprocessing import OneHotEncoder
+    from sklearn.preprocessing import CategoricalEncoder
 from sklearn.model_selection import train_test_split
 X_train, X_test, Y_train, Y_test = train_test_split( X, Y, test_size = preprocess_dict["TrainSplit"], random_state = rand_state )
 if( flags_dict["do_feature_scaling"] ):
