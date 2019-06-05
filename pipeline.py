@@ -1,3 +1,5 @@
+# Machine Learning Pipeline. Hridai Trivedy. May 2019. hridaitrivedy@gmail.com
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,31 +10,16 @@ classification_model_names = [ "Logistic", "KNN", "SVM", "Bayes", "DecisionTree"
 preprocess_dict = {
         "TrainSplit": 0.25,
         "ModelType": "Classification",
-        "ModelName": "Poly"
+        "ModelName": "Poly",
         }
 
 flags_dict = {
-        "do_feature_scaling" : True,
         "show_confusionmatrix" : True,
         "show_graph" : True,
-        "do_all_classification_models" : True ,
-        "encode_category" : True
+        "do_all_classification_models" : True,
         }
 
-#### Model Hyperparameters
-## Common
-rand_state = 42
-## Poly regression
-poly_degree = 4
-## K-Nearest-Neighbors
-knn_neighbors = 5
-knn_metric = "minkowski"
-knn_minkowski_power = 2
-## Support Vector Machine
-svc_kernel = "rbf"
-## Trees
-tree_criterion = "entropy"
-tree_n = 10
+rand_state = 42 # Rand seed number. Write "None" for true randomness
                 
 def runclassification( model_name_in ):
     if( model_name_in == 'Logistic' ):
@@ -43,13 +30,13 @@ def runclassification( model_name_in ):
         
     elif( model_name_in == "KNN" ):
         from sklearn.neighbors import KNeighborsClassifier
-        classifier = KNeighborsClassifier( n_neighbors = knn_neighbors, metric = knn_metric, p = knn_minkowski_power )
+        classifier = KNeighborsClassifier( n_neighbors = 5, metric = "minkowski", p = 2 )
         classifier.fit(X_train, Y_train)
         Y_pred = classifier.predict(X_test)
     
     elif( model_name_in == "SVM" ):
         from sklearn.svm import SVC
-        classifier = SVC( kernel = svc_kernel, random_state = rand_state )
+        classifier = SVC( kernel = 'rbf', random_state = rand_state )
         classifier.fit(X_train, Y_train)
         Y_pred = classifier.predict(X_test)
         
@@ -61,13 +48,13 @@ def runclassification( model_name_in ):
         
     elif( model_name_in == "DecisionTree" ):
         from sklearn.tree import DecisionTreeClassifier
-        classifier = DecisionTreeClassifier( criterion = tree_criterion, random_state = rand_state )
+        classifier = DecisionTreeClassifier( criterion = 'entropy', random_state = rand_state )
         classifier.fit(X_train, Y_train)
         Y_pred = classifier.predict(X_test)
     
     elif( model_name_in == "RandomForest" ):
         from sklearn.ensemble import RandomForestClassifier
-        classifier = RandomForestClassifier( n_estimators = tree_n, criterion = tree_criterion, random_state = rand_state )
+        classifier = RandomForestClassifier( n_estimators = 10, criterion = 'entropy', random_state = rand_state )
         classifier.fit(X_train, Y_train)
         Y_pred = classifier.predict(X_test)
 
@@ -100,7 +87,7 @@ def run_regression( model_name_in ):
         lin_reg = LinearRegression()
         lin_reg.fit( X, Y )
         from sklearn.preprocessing import PolynomialFeatures
-        poly_reg = PolynomialFeatures( degree = poly_degree )
+        poly_reg = PolynomialFeatures( degree = 4 )
         X_poly = poly_reg.fit_transform(X)
         poly_reg.fit( X_poly, Y )
         lin_reg_2 = LinearRegression()
@@ -117,23 +104,78 @@ def run_regression( model_name_in ):
         plt.ylabel('Salary')
         plt.show()
 
+
 ##### Main #####
+## Import file into pandas dataset
 filepath="C:\\Users\Hridai\Desktop\Machine Learning A-Z Udemy\\"
 filename="Social_Network_Ads.csv"
 filepath = filepath + filename
 dataset = pd.read_csv( filepath )
-X = dataset.iloc[:, [2,3] ].values
+
+
+## Analyse import
+dataset.head()
+dataset.info()
+disp = dataset.describe()
+dataset.hist(bins=50)
+from pandas.plotting import scatter_matrix
+attributes = ["Gender", "Age", "EstimatedSalary", "Purchased"]
+scatter_matrix( dataset[attributes])
+corr_matrix = dataset.corr()
+corr_matrix["Purchased"].sort_values( ascending=False )
+
+## Clean data
+## Dealing with a feature which has blanks or NA values
+dataset.dropna(subset=["FEATURENAME"])
+dataset.drop("FEATURENAME", axis=1 )
+median = dataset["EstimatedSalary"].median()
+dataset["EstimatedSalary"].fillna( median, inplace=True ) # fills in the median values instead of NA
+# there exists a "from skylearn.impute import SimpleImputer" that does somethign like the above. Pg 61
+
+
+## Split indep/dependent variables
+X = dataset.iloc[:, 2:-1 ].values # we want this to be a numpy object to carry out encoding
 Y = dataset.iloc[:,4].values
-if( flags_dict["encode_category"] ):
-    from sklearn.preprocessing import OneHotEncoder
-    from sklearn.preprocessing import CategoricalEncoder
+
+
+## Encode categorial features. Note the X value cannot be a dataframe it must be a numpy object
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+labelencoder = LabelEncoder()
+X[:,0] = labelencoder.fit_transform(X[:,0])
+onehotencoder = OneHotEncoder( categorical_features= [0] )
+X = onehotencoder.fit_transform( X ).toarray()
+
+
+## Random or Stratified sampling:
+from sklearn.model_selection import StratifiedShuffleSplit
+split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state = rand_state)
+X_train, X_Test = split.split( X, X["INDEX"] )
+# non-stratified sampling (random)
 from sklearn.model_selection import train_test_split
 X_train, X_test, Y_train, Y_test = train_test_split( X, Y, test_size = preprocess_dict["TrainSplit"], random_state = rand_state )
-if( flags_dict["do_feature_scaling"] ):
-    from sklearn.preprocessing import StandardScaler
-    sc = StandardScaler()
-    X_train = sc.fit_transform(X_train)
-    X_test = sc.transform(X_test) 
+
+
+## Feature Scaling
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+
+## Gridsearch. Optimize hyperparameters. Note the existence of a class RandomizedSearchCV.
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+gridmodel = RandomForestClassifier()
+param_grid = [
+        {'n_estimators':[1,2,3], 'criterion':['gini','entropy']}
+        ]
+gridsearch = GridSearchCV(gridmodel, param_grid, cv=5, scoring='neg_mean_squared_error')
+gridsearch.fit( X_train, Y_train )
+gridsearch.best_estimator_
+gs_results = gridsearch.cv_results_
+gs_feature_importance = gridsearch.best_estimator_.feature_importances_ # gives the relative importance of each feature
+''' you can use the above line to filter out the least important characteristics '''
+
 if( preprocess_dict["ModelType"] == 'Classification' ):
     if( flags_dict["do_all_classification_models"] ):
         for name in classification_model_names:
@@ -141,5 +183,6 @@ if( preprocess_dict["ModelType"] == 'Classification' ):
             runclassification( temp_model_name )
     else:
         runclassification( preprocess_dict["ModelName"] )
+
 if( preprocess_dict["ModelName"] == "Regression" ):        
     run_regression( flags_dict["ModelName"] )
