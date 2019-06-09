@@ -10,18 +10,28 @@ classification_model_names = [ "Logistic", "KNN", "SVM", "Bayes", "DecisionTree"
 preprocess_dict = {
         "TrainSplit": 0.25,
         "ModelType": "Classification",
-        "ModelName": "Poly",
+        "ModelName": "KNN",
         }
 
 flags_dict = {
         "show_confusionmatrix" : True,
         "show_graph" : True,
         "do_all_classification_models" : True,
+        "calc_MSE" : True,
         }
 
 rand_state = 42 # Rand seed number. Write "None" for true randomness
-                
-def runclassification( model_name_in ):
+
+class MSE_pair:
+    def __init__(self, in_model_name, in_mse_value):
+        self.MSE_model_name = in_model_name
+        self.MSE_value = in_mse_value
+
+    def showMSE(self):
+        print( "MSE for ", self.MSE_model_name, " is:[" , self.MSE_value, "]")
+
+
+def runclassification( model_name_in, mse_vec ):
     if( model_name_in == 'Logistic' ):
         from sklearn.linear_model import LogisticRegression
         classifier = LogisticRegression( random_state = rand_state )
@@ -63,6 +73,15 @@ def runclassification( model_name_in ):
         cm = confusion_matrix( Y_test, Y_pred )
         print( model_name_in, 'confusion matrix \n', cm)
     
+    if( flags_dict["calc_MSE"] ):
+        from sklearn.metrics import mean_squared_error
+        final_mse = np.sqrt(mean_squared_error(Y_test, Y_pred))
+        if( flags_dict['do_all_classification_models']):
+            msepair = MSE_pair( model_name_in, final_mse )
+            mse_vec.append( msepair )
+        else:
+            print( "MSE for ", model_name_in, " is:[" , final_mse, "]")
+        
     if( flags_dict["show_graph"] ):
         from matplotlib.colors import ListedColormap
         X_set, y_set = X_test, Y_test
@@ -162,7 +181,8 @@ X_train = sc.fit_transform(X_train)
 X_test = sc.transform(X_test)
 
 
-## Gridsearch. Optimize hyperparameters. Note the existence of a class RandomizedSearchCV.
+## Gridsearch. Optimize hyperparameters. Note the existence of a class RandomizedSearchCV
+## which randomises features and tests permutations of their hyperparameters.
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 gridmodel = RandomForestClassifier()
@@ -178,11 +198,21 @@ gs_feature_importance = gridsearch.best_estimator_.feature_importances_ # gives 
 
 if( preprocess_dict["ModelType"] == 'Classification' ):
     if( flags_dict["do_all_classification_models"] ):
+        mse_vec = []
         for name in classification_model_names:
             temp_model_name = name
-            runclassification( temp_model_name )
+            runclassification( temp_model_name, mse_vec )
+        minMSE = 999999.
+        minMSEname = ''
+        for i in range( 0, len(mse_vec), 1):
+            temp_mse_pair = mse_vec[i]
+            temp_mse_pair.showMSE()
+            if( temp_mse_pair.MSE_value < minMSE ):
+                minMSE = temp_mse_pair.MSE_value
+                minMSEname = temp_mse_pair.MSE_model_name
+        print( 'min values are found for model [', minMSEname, '] with value [', minMSE, ']')
     else:
-        runclassification( preprocess_dict["ModelName"] )
+        runclassification( preprocess_dict["ModelName"], mse_vec )
 
 if( preprocess_dict["ModelName"] == "Regression" ):        
     run_regression( flags_dict["ModelName"] )
