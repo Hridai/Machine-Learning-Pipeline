@@ -22,6 +22,7 @@ flags_dict = {
 
 rand_state = 42 # Rand seed number. Write "None" for true randomness
 
+
 class MSE_pair:
     def __init__(self, in_model_name, in_mse_value):
         self.MSE_model_name = in_model_name
@@ -31,7 +32,7 @@ class MSE_pair:
         print( "MSE for ", self.MSE_model_name, " is:[" , self.MSE_value, "]")
 
 
-def runclassification( model_name_in, mse_vec ):
+def run_classification( model_name_in, mse_vec ):
     if( model_name_in == 'Logistic' ):
         from sklearn.linear_model import LogisticRegression
         classifier = LogisticRegression( random_state = rand_state )
@@ -100,26 +101,64 @@ def runclassification( model_name_in, mse_vec ):
         plt.legend()
         plt.show()
 
+
 def run_regression( model_name_in ):
-    if( preprocess_dict["ModelName"] == "Poly" ):
+    if( preprocess_dict["ModelName"] == "Linear" ): # Works
         from sklearn.linear_model import LinearRegression
-        lin_reg = LinearRegression()
-        lin_reg.fit( X, Y )
-        from sklearn.preprocessing import PolynomialFeatures
-        poly_reg = PolynomialFeatures( degree = 4 )
-        X_poly = poly_reg.fit_transform(X)
-        poly_reg.fit( X_poly, Y )
-        lin_reg_2 = LinearRegression()
-        lin_reg_2.fit( X_poly, Y )
+        regressor = LinearRegression()
+        regressor.fit( X_train, Y_train )
+        Y_pred = regressor.predict( X_test )
     
-    if( flags_dict["show_graph"] ):
+    elif( preprocess_dict["ModelName"] == "Poly" ): # Broken
+        from sklearn.preprocessing import PolynomialFeatures
+        regressor = PolynomialFeatures( degree = 2 )
+        X_poly = regressor.fit_transform( X_train )
+        regressor.fit( X_train, Y_train )
+        lin_reg_2 = LinearRegression()
+        lin_reg_2.fit( X_poly, Y_train )
+        Y_pred = lin_reg_2.predict( X_train )
+    
+    elif( preprocess_dict['ModelName'] == 'SVM' ): # Broken
+        from sklearn.svm import SVR
+        regressor = SVR( kernel = 'rbf' )
+        regressor.fit( X_train, Y_train )
+        # Predicting a new result
+        from sklearn.preprocessing import StandardScaler
+        sc_X = StandardScaler()
+        sc_Y = StandardScaler()
+        Y_pred = regressor.predict(sc_X.transform(np.array([[6.5]])))
+        Y_pred = sc_Y.inverse_transform( Y_pred )
+        
+    elif( preprocess_dict['ModelName'] == 'DecisionTree' ): # Broken
+        from sklearn.tree import DecisionTreeRegressor
+        regressor = DecisionTreeRegressor( random_state = rand_state )
+        regressor.fit( X, Y )
+        Y_pred = regressor.predict(6.5)
+    
+    elif( preprocess_dict['ModelName'] == 'RandomForest' ): # Untested
+        from sklearn.ensemble import RandomForestRegressor
+        regressor = RandomForestRegressor( n_estimators = 20, random_state = rand_state )
+        regressor.fit(X, Y)
+        Y_pred = regressor.predict(6.5)
+    
+    if( flags_dict["show_graph"] and ( preprocess_dict["ModelName"] == "Poly" or preprocess_dict["ModelName"] == "Linear" ) ):
         plt.scatter(X_test, Y_test, color = 'red')
-        X_grid = np.arange(min(X), max(X), 0.1)
-        X_grid = X_grid.reshape((len(X_grid), 1))
-        plt.scatter(X, Y, color = 'red')
-        plt.plot(X_grid, lin_reg_2.predict(poly_reg.fit_transform(X_grid)), color = 'blue')
+        plt.plot( X_train, regressor.predict(X_train), color = 'blue' )
+        plt.plot( X_test, regressor.predict( X_test ), color = 'orange' )
         plt.title('Salary vs Experience (Test set)')
         plt.xlabel('Years of Experience')
+        plt.ylabel('Salary')
+        plt.show()
+    
+    elif( flags_dict["show_graph"] and ( ( preprocess_dict["ModelName"] == "SVM" ) or preprocess_dict['ModelName'] == 'DecisionTree' or 
+         preprocess_dict['ModelName'] == 'RandomForest' )):
+        # Visualising the SVR results (for higher resolution and smoother curve)
+        X_grid = np.arange(min(X), max(X), 0.01) # choice of 0.01 instead of 0.1 step because the data is feature scaled
+        X_grid = X_grid.reshape((len(X_grid), 1))
+        plt.scatter(X, Y, color = 'red')
+        plt.plot(X_grid, regressor.predict(X_grid), color = 'blue')
+        plt.title('Truth or Bluff (SVR)')
+        plt.xlabel('Position level')
         plt.ylabel('Salary')
         plt.show()
 
@@ -128,6 +167,7 @@ def run_regression( model_name_in ):
 ## Import file into pandas dataset
 filepath="C:\\Users\Hridai\Desktop\Machine Learning A-Z Udemy\\"
 filename="Social_Network_Ads.csv"
+filename="Salary_Data.csv"
 filepath = filepath + filename
 dataset = pd.read_csv( filepath )
 
@@ -143,6 +183,7 @@ scatter_matrix( dataset[attributes])
 corr_matrix = dataset.corr()
 corr_matrix["Purchased"].sort_values( ascending=False )
 
+
 ## Clean data
 ## Dealing with a feature which has blanks or NA values
 dataset.dropna(subset=["FEATURENAME"])
@@ -156,6 +197,10 @@ dataset["EstimatedSalary"].fillna( median, inplace=True ) # fills in the median 
 X = dataset.iloc[:, 2:-1 ].values # we want this to be a numpy object to carry out encoding
 Y = dataset.iloc[:,4].values
 
+
+####DISP
+X = dataset.iloc[ :,0].values
+Y = dataset.iloc[:, -1:].values
 
 ## Encode categorial features. Note the X value cannot be a dataframe it must be a numpy object
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
@@ -177,8 +222,8 @@ X_train, X_test, Y_train, Y_test = train_test_split( X, Y, test_size = preproces
 ## Feature Scaling
 from sklearn.preprocessing import StandardScaler
 sc = StandardScaler()
-X_train = sc.fit_transform(X_train)
-X_test = sc.transform(X_test)
+X_train = sc.fit_transform( X_train )
+X_test = sc.transform( X_test )
 
 
 ## Gridsearch. Optimize hyperparameters. Note the existence of a class RandomizedSearchCV
@@ -201,7 +246,7 @@ if( preprocess_dict["ModelType"] == 'Classification' ):
         mse_vec = []
         for name in classification_model_names:
             temp_model_name = name
-            runclassification( temp_model_name, mse_vec )
+            run_classification( temp_model_name, mse_vec )
         minMSE = 999999.
         minMSEname = ''
         for i in range( 0, len(mse_vec), 1):
@@ -212,7 +257,7 @@ if( preprocess_dict["ModelType"] == 'Classification' ):
                 minMSEname = temp_mse_pair.MSE_model_name
         print( 'min values are found for model [', minMSEname, '] with value [', minMSE, ']')
     else:
-        runclassification( preprocess_dict["ModelName"], mse_vec )
+        run_classification( preprocess_dict["ModelName"], mse_vec )
 
 if( preprocess_dict["ModelName"] == "Regression" ):        
     run_regression( flags_dict["ModelName"] )
