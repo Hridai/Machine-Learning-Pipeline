@@ -9,8 +9,8 @@ Gridsearch also included for hyperparameter tuning.
 
 preprocess_dict selections:
 	TrainSplit 		:	Any number between 0 and 1
-	ModelType		:	["Classification" ,"Regression"]
-	ModelName		:	["Logistic", "KNN", "SVM", "Bayes", "DecisionTree", "RandomForest"]
+	ModelType		:	["Classification", "Regression", "Clustering"]
+	ModelName		:	["Logistic", "KNN", "SVM", "Bayes", "DecisionTree", "RandomForest", "Poly", "KMeans", "Hierarchical"]
 	
 Structure:
 	1) 	Define file path for reading in by pandas lib
@@ -36,11 +36,13 @@ Structure:
 		
 	6)	Apply Feature Scaling
 	
-	7)	Gridsearch to optimize parameters
+	7)  Carry out Clustering
 	
-	8)	Run model(s)
+	8)	Gridsearch to optimize parameters
 	
-	9)	plot outputs and accuaries
+	9)	Run model(s)
 	
-	10)	Repeat from step 8) or revisit technique entirely if sufficient accuary/recall is not met.
+	10)	plot outputs and accuaries
+	
+	11)	Repeat from step 8) or revisit technique entirely if sufficient accuary/recall is not met.
 	
