@@ -67,12 +67,12 @@ def run_classification( preprocess_dict, flags_dict, X_train, X_test, Y_train, Y
         X1, X2 = np.meshgrid(np.arange(start = X_set[:, 0].min() - 1, stop = X_set[:, 0].max() + 1, step = 0.01),
                              np.arange(start = X_set[:, 1].min() - 1, stop = X_set[:, 1].max() + 1, step = 0.01))
         plt.contourf(X1, X2, classifier.predict(np.array([X1.ravel(), X2.ravel()]).T).reshape(X1.shape),
-                     alpha = 0.75, cmap = ListedColormap(('red', 'green')))
+                     alpha = 0.75, cmap = ListedColormap(('#FDDA87', '#668AFF')))
         plt.xlim(X1.min(), X1.max())
         plt.ylim(X2.min(), X2.max())
         for i, j in enumerate(np.unique(y_set)):
             plt.scatter(X_set[y_set == j, 0], X_set[y_set == j, 1],
-                        c = ListedColormap(('red', 'green'))(i), label = j)
+                        c = ListedColormap(['#FFCE58', '#295BFF'])(i), label = j, edgecolors = 'black')
         plt.title( model_name_in )
         plt.xlabel('Age')
         plt.ylabel('Estimated Salary')
@@ -112,8 +112,8 @@ def run_regression( preprocess_dict, flags_dict, X, Y, model_name_in ):
     # Plot graphs
     if( flags_dict["show_graph"] and ( preprocess_dict["ModelName"] == "Linear" or preprocess_dict['ModelName'] == 'SVM' ) ):
         plt.scatter(X, Y, color = 'red')
-        plt.plot( X, regressor.predict(X), color = 'blue' )
-        plt.plot( X, regressor.predict( X ), color = 'orange' )
+        plt.plot( X, regressor.predict(X), color = '#FDDA87' )
+        plt.plot( X, regressor.predict( X ), color = '#295BFF' )
         plt.title('Salary vs Experience (Test set)')
         plt.xlabel('Years of Experience')
         plt.ylabel('Salary')
@@ -121,8 +121,8 @@ def run_regression( preprocess_dict, flags_dict, X, Y, model_name_in ):
     
     elif( flags_dict["show_graph"] and preprocess_dict["ModelName"] == "Poly" ):
         # Visualising the Polynomial Regression results
-        plt.scatter(X, Y, color = 'red')
-        plt.plot(X, lin_reg_2.predict( regressor.fit_transform(X)), color = 'blue' )
+        plt.scatter(X, Y, color = '#295BFF')
+        plt.plot(X, lin_reg_2.predict( regressor.fit_transform(X)), color = '#FDDA87' )
         plt.title('Truth or Bluff (Polynomial Regression)')
         plt.xlabel('Position level')
         plt.ylabel('Salary')
@@ -133,8 +133,8 @@ def run_regression( preprocess_dict, flags_dict, X, Y, model_name_in ):
         # Visualising the SVR results (for higher resolution and smoother curve)
         X_grid = np.arange(min(X), max(X), 0.01) # choice of 0.01 instead of 0.1 step because the data is feature scaled
         X_grid = X_grid.reshape((len(X_grid), 1))
-        plt.scatter(X, Y, color = 'red')
-        plt.plot(X_grid, regressor.predict(X_grid), color = 'blue')
+        plt.scatter(X, Y, color = '#295BFF')
+        plt.plot(X_grid, regressor.predict(X_grid), color = '#FDDA87')
         plt.title('Truth or Bluff (SVR)')
         plt.xlabel('Position level')
         plt.ylabel('Salary')
